@@ -1,12 +1,24 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// --- SECCIÓN DE SERVICIOS ---
 
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-var app = builder.Build();
+//  CONFIGURACIÓN DE REDIS (Módulo 1 - Álvaro)
+// Usamos la contraseña que definimos en el docker-compose: RepublicRadar_2024!
+var redisConnectionString = "localhost:6379,password=RepublicRadar_2024!";
+
+// Registramos el multiplexor como Singleton (una sola conexión para toda la App)
+builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
+    StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString));
+
+// Registramos tu repositorio para que el Controller pueda pedirlo por el constructor
+builder.Services.AddScoped<HoloRed.Infrastructure.Repositories.RedisRadarRepository>();
+
+// --------------------------------------------------------
+
+var app = builder.Build(); 
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -15,9 +27,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
 
 app.Run();
