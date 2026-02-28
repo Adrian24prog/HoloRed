@@ -1,5 +1,4 @@
 ﻿using Cassandra.Mapping;
-using HoloRed.Domain.Entities;
 
 namespace HoloRed.Infrastructure.Cassandra;
 
@@ -15,7 +14,7 @@ public class CassandraMappingConfig : global::Cassandra.Mapping.Mappings
     public CassandraMappingConfig()
     {
         // 1. Iniciamos el mapeo para la entidad RegistroCombate
-        var mapConfig = For<global::HoloRed.Domain.Entities.RegistroCombate>()
+        var mapConfig = For<global::HoloRed.Domain.Entities.Cassandra.RegistroCombate>()
             .TableName("telemetria_combate");
 
         // 2. Definimos la Partition Key (Clave de Partición)

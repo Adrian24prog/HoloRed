@@ -1,4 +1,4 @@
-﻿namespace HoloRed.Domain.Entities;
+﻿namespace HoloRed.Domain.Entities.Cassandra;
 
 /// <summary>
 /// Entidad que representa la tabla de telemetría en Cassandra.
