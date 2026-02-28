@@ -1,0 +1,89 @@
+############################
+# Build results
+############################
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+artifacts/
+
+############################
+# Visual Studio files
+############################
+.vs/
+.vscode/
+.idea/
+
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+
+############################
+# Rider / JetBrains
+############################
+.idea/
+*.sln.iml
+
+############################
+# OS generated files
+############################
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+############################
+# Logs & temp files
+############################
+*.log
+*.tmp
+*.bak
+*.swp
+*.temp
+
+############################
+# Test & coverage
+############################
+TestResults/
+*.coverage
+*.coveragexml
+
+############################
+# NuGet
+############################
+packages/
+*.nupkg
+*.snupkg
+
+############################
+# Dotnet tools
+############################
+.dotnet/
+.tooling/
+
+############################
+# App settings (local / secrets)
+############################
+appsettings.Development.json
+appsettings.Local.json
+appsettings.*.Local.json
+
+############################
+# Database / local cache
+############################
+*.db
+*.sqlite
+*.mdf
+*.ldf
+
+############################
+# Others
+############################
+_ReSharper*/
+*.resharper
+*.cache
