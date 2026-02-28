@@ -10,6 +10,14 @@ x64/
 x86/
 artifacts/
 
+# Ignorar los volúmenes de las bases de datos (Evita los 67 archivos de Neo4j/Cassandra)
+**/data/
+
+# Ignorar archivos temporales de VS que se te colaron
+.vs/
+[Bb]in/
+[Oo]bj/
+
 ############################
 # Visual Studio files
 ############################
