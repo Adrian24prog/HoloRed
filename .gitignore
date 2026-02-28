@@ -1,14 +1,13 @@
+
 ############################
-# Build results
-############################
+# 1. Ignorar la persistencia de las BBDD locales 
+
+# 2. Proyecto limpio de binarios 
 [Bb]in/
 [Oo]bj/
-[Ll]og/
-[Dd]ebug/
-[Rr]elease/
-x64/
-x86/
-artifacts/
+
+# 3. Variables de entorno locales 
+.env
 
 # Ignorar los volúmenes de las bases de datos (Evita los 67 archivos de Neo4j/Cassandra)
 **/data/
@@ -19,43 +18,7 @@ artifacts/
 [Oo]bj/
 
 ############################
-# Visual Studio files
-############################
-.vs/
-.vscode/
-.idea/
-
-*.user
-*.suo
-*.userosscache
-*.sln.docstates
-*.rsuser
-
-############################
-# Rider / JetBrains
-############################
-.idea/
-*.sln.iml
-
-############################
-# OS generated files
-############################
-.DS_Store
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-
-############################
-# Logs & temp files
-############################
-*.log
-*.tmp
-*.bak
-*.swp
-*.temp
-
-############################
-# Test & coverage
+# Tests
 ############################
 TestResults/
 *.coverage
@@ -95,3 +58,7 @@ appsettings.*.Local.json
 _ReSharper*/
 *.resharper
 *.cache
+.vs/
+.vscode/
+*.user
+*.suo
