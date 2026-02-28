@@ -5,7 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
-//  CONFIGURACIÓN DE REDIS (Módulo 1 - Álvaro)
+//  CONFIGURACIÓN DE REDIS Alvaro
 // Usamos la contraseña que definimos en el docker-compose: RepublicRadar_2024!
 var redisConnectionString = "localhost:6379,password=RepublicRadar_2024!";
 
@@ -15,7 +15,7 @@ builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
 
 // Registramos tu repositorio para que el Controller pueda pedirlo por el constructor
 builder.Services.AddScoped<HoloRed.Infrastructure.Repositories.RedisRadarRepository>();
-
+builder.Services.AddSingleton<HoloRed.Services.AtraqueService>();
 // --------------------------------------------------------
 
 var app = builder.Build(); 
