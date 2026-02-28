@@ -1,0 +1,72 @@
+# ==============================================================================
+# Proyecto: Cuartel General de Inteligencia de la Nueva República
+# Archivo: docker-compose.yml
+# Autor: Alvaro Naranjo
+# Descripción: Orquestación de contenedores para la arquitectura de persistencia
+# políglota. Despliega Redis, Cassandra y Neo4j de forma simultánea con 
+# persistencia de datos (volúmenes) y credenciales de seguridad.
+# ==============================================================================
+
+version: '3.8'
+
+services:
+  # -----------------------------------------------------------
+  # MÓDULO 1: REDIS (Radar y Estado Espacial)
+  # -----------------------------------------------------------
+  # Motor en memoria (Clave-Valor) para operaciones submilisegundo.
+  # Gestiona el estado efímero de las naves y sus TTLs.
+  redis-republic:
+    image: redis:7-alpine
+    container_name: redis_radar
+    # Seguridad: Contraseña obligatoria (--requirepass)
+    # Persistencia: Activada en modo Append Only File (--appendonly yes)
+    command: redis-server --requirepass "RepublicRadar_2024!" --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./data/redis:/data # Volumen local para no perder el estado del radar
+    restart: unless-stopped
+
+  # -----------------------------------------------------------
+  # MÓDULO 2: CASSANDRA (Logs de Batalla)
+  # -----------------------------------------------------------
+  # Motor de Familias de Columnas P2P para escrituras masivas (append-only).
+  # Almacenará la telemetría de los impactos láser y escudos.
+  cassandra-republic:
+    image: cassandra:latest
+    container_name: cassandra_telemetria
+    environment:
+      # Seguridad: Credenciales nativas del administrador de Cassandra
+      - CASSANDRA_USER=admin
+      - CASSANDRA_PASSWORD=RepublicBattle_2026!
+    ports:
+      - "9042:9042" # Puerto por defecto para conexiones CQL
+    volumes:
+      - ./data/cassandra:/var/lib/cassandra # Volumen local para los nodos de datos
+    restart: unless-stopped
+    healthcheck:
+      # Verificación de salud: Asegura que el servicio CQL está listo para recibir peticiones
+     
+      test: ["CMD", "cqlsh", "-u", "admin", "-p", "RepublicBattle_2026!", "-e", "describe keyspaces"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # -----------------------------------------------------------
+  # MÓDULO 3: NEO4J (Red de Espionaje)
+  # -----------------------------------------------------------
+  # Motor orientado a Grafos para desentrañar alianzas y traiciones.
+  # Conectará Nodos (Facción, Planeta, Espía) mediante Aristas.
+  neo4j-republic:
+    image: neo4j:5
+    container_name: neo4j_inteligencia
+    environment:
+      # Seguridad: Usuario nativo 'neo4j', configuramos la contraseña inicial
+      - NEO4J_AUTH=neo4j/RepublicSpies_2026!
+    ports:
+      - "7474:7474" # Interfaz Web de Neo4j Browser (para pruebas manuales)
+      - "7687:7687" # Protocolo Bolt (utilizado por el driver de C#)
+    volumes:
+      - ./data/neo4j/data:/data # Volumen local para los nodos y relaciones del grafo
+      - ./data/neo4j/logs:/logs # Volumen local para auditoría y logs
+    restart: unless-stopped
