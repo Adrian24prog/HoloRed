@@ -1,41 +1,86 @@
-
 ############################
-# 1. Ignorar la persistencia de las BBDD locales 
-
-# 2. Proyecto limpio de binarios 
+# Build results
+############################
 [Bb]in/
 [Oo]bj/
-
-# 3. Variables de entorno locales 
-.env
-
+[Ll]og/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+artifacts/
+ 
+# Ignorar los volúmenes de las bases de datos (Evita los 67 archivos de Neo4j/Cassandra)
+**/data/
+ 
+# Ignorar archivos temporales de VS que se te colaron
+.vs/
+[Bb]in/
+[Oo]bj/
+ 
 ############################
-# Tests
+# Visual Studio files
+############################
+.vs/
+.vscode/
+.idea/
+ 
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.rsuser
+ 
+############################
+# Rider / JetBrains
+############################
+.idea/
+*.sln.iml
+ 
+############################
+# OS generated files
+############################
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+ 
+############################
+# Logs & temp files
+############################
+*.log
+*.tmp
+*.bak
+*.swp
+*.temp
+ 
+############################
+# Test & coverage
 ############################
 TestResults/
 *.coverage
 *.coveragexml
-
+ 
 ############################
 # NuGet
 ############################
 packages/
 *.nupkg
 *.snupkg
-
+ 
 ############################
 # Dotnet tools
 ############################
 .dotnet/
 .tooling/
-
+ 
 ############################
 # App settings (local / secrets)
 ############################
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.Local.json
-
+ 
 ############################
 # Database / local cache
 ############################
@@ -43,14 +88,10 @@ appsettings.*.Local.json
 *.sqlite
 *.mdf
 *.ldf
-
+ 
 ############################
 # Others
 ############################
 _ReSharper*/
 *.resharper
 *.cache
-.vs/
-.vscode/
-*.user
-*.suo
