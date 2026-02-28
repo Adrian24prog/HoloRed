@@ -1,0 +1,12 @@
+2026-02-28 14:27:40.438+0000 INFO  Logging config in use: File '/var/lib/neo4j/conf/user-logs.xml'
+2026-02-28 14:27:40.494+0000 INFO  Starting...
+2026-02-28 14:27:48.495+0000 INFO  This instance is ServerId{30925ab2} (30925ab2-8f22-4a28-9204-4a32a7ad0ddb)
+2026-02-28 14:27:58.756+0000 INFO  ======== Neo4j 5.26.21 ========
+2026-02-28 14:29:09.720+0000 INFO  Anonymous Usage Data is being sent to Neo4j, see https://neo4j.com/docs/usage-data/
+2026-02-28 14:29:12.084+0000 INFO  Bolt enabled on 0.0.0.0:7687.
+2026-02-28 14:29:32.969+0000 INFO  HTTP enabled on 0.0.0.0:7474.
+2026-02-28 14:29:32.975+0000 INFO  Remote interface available at http://localhost:7474/
+2026-02-28 14:29:33.023+0000 INFO  id: 513CDE5A1F5B57C1C8516EC517E20E163D84C5DE6F6C8A6ACFFF533213EBD119
+2026-02-28 14:29:33.025+0000 INFO  name: system
+2026-02-28 14:29:33.026+0000 INFO  creationDate: 2026-02-28T14:28:17.268Z
+2026-02-28 14:29:33.027+0000 INFO  Started.

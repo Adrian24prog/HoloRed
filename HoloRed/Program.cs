@@ -1,26 +1,26 @@
-﻿using HoloRed.Domain.Interfaces;
+ï»¿using HoloRed.Domain.Interfaces;
 using HoloRed.Infrastructure.Repositories;
 using HoloRed.Services;
 using StackExchange.Redis;
-using Microsoft.OpenApi.Models; // <--- ¡YA NO DEBERÍA ESTAR EN ROJO!
+using Microsoft.OpenApi.Models; // <--- Â¡YA NO DEBERÃA ESTAR EN ROJO!
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- SECCIÓN DE SERVICIOS ---
+// --- SECCIÃN DE SERVICIOS ---
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    // Usamos OpenApiInfo de la librería .Models
+    // Usamos OpenApiInfo de la librerÃ­a .Models
     c.SwaggerDoc("v1", new OpenApiInfo
     {
-        Title = "HoloRed API - Nueva República",
+        Title = "HoloRed API - Nueva RepÃºblica",
         Version = "v1"
     });
 });
 
-// CONFIGURACIÓN DE REDIS (Álvaro)
+// CONFIGURACIÃN DE REDIS (Ãlvaro)
 var redisConnectionString = "localhost:6379,password=RepublicRadar_2024!,abortConnect=false";
 try
 {
@@ -29,7 +29,7 @@ try
 }
 catch (Exception ex)
 {
-    Console.WriteLine($"⚠️ Error conectando a Redis: {ex.Message}");
+    Console.WriteLine($"â ï¸ Error conectando a Redis: {ex.Message}");
 }
 
 // REGISTRO DE DEPENDENCIAS
@@ -38,7 +38,7 @@ builder.Services.AddSingleton<AtraqueService>();
 
 var app = builder.Build();
 
-// --- PIPELINE DE EJECUCIÓN ---
+// --- PIPELINE DE EJECUCIÃN ---
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -50,6 +50,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
-app.MapControllers(); // <-- El error de Reflection se irá tras limpiar carpetas
+app.MapControllers(); // <-- El error de Reflection se irÃ¡ tras limpiar carpetas
 
 app.Run();

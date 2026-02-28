@@ -24,19 +24,19 @@ artifacts/
 .vs/
 .vscode/
 .idea/
-
+ 
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 *.rsuser
-
+ 
 ############################
 # Rider / JetBrains
 ############################
 .idea/
 *.sln.iml
-
+ 
 ############################
 # OS generated files
 ############################
@@ -44,7 +44,7 @@ artifacts/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-
+ 
 ############################
 # Logs & temp files
 ############################
@@ -53,34 +53,34 @@ Desktop.ini
 *.bak
 *.swp
 *.temp
-
+ 
 ############################
 # Test & coverage
 ############################
 TestResults/
 *.coverage
 *.coveragexml
-
+ 
 ############################
 # NuGet
 ############################
 packages/
 *.nupkg
 *.snupkg
-
+ 
 ############################
 # Dotnet tools
 ############################
 .dotnet/
 .tooling/
-
+ 
 ############################
 # App settings (local / secrets)
 ############################
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.Local.json
-
+ 
 ############################
 # Database / local cache
 ############################
@@ -88,7 +88,7 @@ appsettings.*.Local.json
 *.sqlite
 *.mdf
 *.ldf
-
+ 
 ############################
 # Others
 ############################
