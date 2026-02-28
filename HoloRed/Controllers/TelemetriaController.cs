@@ -1,70 +1,67 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using HoloRed.Dtos;
+using HoloRed.Domain.Interfaces;
 using HoloRed.Infrastructure.Cassandra;
-using HoloRed.Domain.Entities;
+using System;
+using System.Threading.Tasks;
 
-namespace HoloRed.Controllers;
-
-[Route("api/[controller]")]
-[ApiController]
-public class TelemetriaController : ControllerBase
+namespace HoloRed.Controllers
 {
-    private readonly CassandraTelemetriaRepository _repository;
-
-    /// <summary>
-    /// Constructor que inyecta el repositorio de Cassandra.
-    /// </summary>
-    /// <remarks>Autor: Adrian Dondarza</remarks>
-    public TelemetriaController(CassandraTelemetriaRepository repository)
+    [Route("api/[controller]")]
+    [ApiController]
+    public class TelemetriaController : ControllerBase
     {
-        _repository = repository;
-    }
+        private readonly IInteligenciaService _inteligenciaService;
+        private readonly CassandraTelemetriaRepository _repository; // Mantenemos este solo para la consulta directa de historial
 
-    /// <summary>
-    /// POST /api/telemetria/impacto
-    /// Registra un impacto de bláster masivo en tiempo real.
-    /// </summary>
-    [HttpPost("impacto")]
-    public async Task<IActionResult> RegistrarImpacto([FromBody] ImpactoBatallaDto dto)
-    {
-        try
+        /// <summary>
+        /// Constructor que inyecta el servicio de inteligencia y el repositorio.
+        /// </summary>
+        /// <remarks>Autor: Adrian Dondarza</remarks>
+        public TelemetriaController(IInteligenciaService inteligenciaService, CassandraTelemetriaRepository repository)
         {
-            // Convertimos el DTO a la Entidad de Cassandra
-            var entidad = new RegistroCombate
+            _inteligenciaService = inteligenciaService;
+            _repository = repository;
+        }
+
+        /// <summary>
+        /// POST /api/telemetria/impacto
+        /// Registra un impacto de bláster masivo delegando la lógica al Service.
+        /// </summary>
+        [HttpPost("impacto")]
+        public async Task<IActionResult> RegistrarImpacto([FromBody] ImpactoBatallaDto dto)
+        {
+            try
             {
-                SectorId = dto.SectorId,
-                Fecha = dto.Fecha.Date, // Solo la parte de la fecha
-                Timestamp = DateTimeOffset.Now,
-                NaveAtacante = dto.NaveAtacante,
-                NaveObjetivo = dto.NaveObjetivo,
-                DañoEscudos = dto.DañoEscudos
-            };
+                // Delegamos toda la lógica de conversión y guardado al servicio
+                await _inteligenciaService.RegistrarEventoCombateAsync(dto);
 
-            await _repository.RegistrarImpactoAsync(entidad);
-            return Ok(new { mensaje = "Impacto registrado en los logs de la República" });
+                return Ok(new { mensaje = "Impacto registrado en los logs de la República a través del Service" });
+            }
+            catch (Exception ex)
+            {
+                // Cumplimos la rúbrica: Error 503 si el motor NoSQL no responde
+                return StatusCode(503, "Sistemas de telemetría fuera de línea: " + ex.Message);
+            }
         }
-        catch (Exception ex)
-        {
-            // Si Cassandra cae, devolvemos 503 como pide la rúbrica
-            return StatusCode(503, "Sistemas de telemetría fuera de línea: " + ex.Message);
-        }
-    }
 
-    /// <summary>
-    /// GET /api/telemetria/historial/{sector}?fecha=YYYY-MM-DD
-    /// Devuelve el registro de batalla de un sector en un día específico.
-    /// </summary>
-    [HttpGet("historial/{sector}")]
-    public async Task<IActionResult> ObtenerHistorial(string sector, [FromQuery] DateTime fecha)
-    {
-        try
+        /// <summary>
+        /// GET /api/telemetria/historial/{sector}?fecha=YYYY-MM-DD
+        /// Devuelve el registro de batalla de un sector en un día específico.
+        /// </summary>
+        [HttpGet("historial/{sector}")]
+        public async Task<IActionResult> ObtenerHistorial(string sector, [FromQuery] DateTime fecha)
         {
-            var resultados = await _repository.ObtenerHistorialPorSectorAsync(sector, fecha.Date);
-            return Ok(resultados);
-        }
-        catch (Exception)
-        {
-            return StatusCode(503, "Error al consultar la HoloRed");
+            try
+            {
+                // Consulta directa optimizada por Partition Key
+                var resultados = await _repository.ObtenerHistorialPorSectorAsync(sector, fecha.Date);
+                return Ok(resultados);
+            }
+            catch (Exception)
+            {
+                return StatusCode(503, "Error al consultar la HoloRed");
+            }
         }
     }
 }

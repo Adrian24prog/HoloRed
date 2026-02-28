@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("HoloRed")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d1e0f53f2b01d2e14774373b7d32aef281f440ba")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+962783eadc5158301d810d249c4c91107b8ecc91")]
 [assembly: System.Reflection.AssemblyProductAttribute("HoloRed")]
 [assembly: System.Reflection.AssemblyTitleAttribute("HoloRed")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
