@@ -9,26 +9,34 @@
 x64/
 x86/
 artifacts/
-
+ 
+# Ignorar los volúmenes de las bases de datos (Evita los 67 archivos de Neo4j/Cassandra)
+**/data/
+ 
+# Ignorar archivos temporales de VS que se te colaron
+.vs/
+[Bb]in/
+[Oo]bj/
+ 
 ############################
 # Visual Studio files
 ############################
 .vs/
 .vscode/
 .idea/
-
+ 
 *.user
 *.suo
 *.userosscache
 *.sln.docstates
 *.rsuser
-
+ 
 ############################
 # Rider / JetBrains
 ############################
 .idea/
 *.sln.iml
-
+ 
 ############################
 # OS generated files
 ############################
@@ -36,7 +44,7 @@ artifacts/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
-
+ 
 ############################
 # Logs & temp files
 ############################
@@ -45,34 +53,34 @@ Desktop.ini
 *.bak
 *.swp
 *.temp
-
+ 
 ############################
 # Test & coverage
 ############################
 TestResults/
 *.coverage
 *.coveragexml
-
+ 
 ############################
 # NuGet
 ############################
 packages/
 *.nupkg
 *.snupkg
-
+ 
 ############################
 # Dotnet tools
 ############################
 .dotnet/
 .tooling/
-
+ 
 ############################
 # App settings (local / secrets)
 ############################
 appsettings.Development.json
 appsettings.Local.json
 appsettings.*.Local.json
-
+ 
 ############################
 # Database / local cache
 ############################
@@ -80,7 +88,7 @@ appsettings.*.Local.json
 *.sqlite
 *.mdf
 *.ldf
-
+ 
 ############################
 # Others
 ############################
