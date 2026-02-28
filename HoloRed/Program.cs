@@ -1,33 +1,55 @@
+﻿using HoloRed.Domain.Interfaces;
+using HoloRed.Infrastructure.Repositories;
+using HoloRed.Services;
+using StackExchange.Redis;
+using Microsoft.OpenApi.Models; // <--- ¡YA NO DEBERÍA ESTAR EN ROJO!
+
 var builder = WebApplication.CreateBuilder(args);
 
-// --- SECCI�N DE SERVICIOS ---
-
+// --- SECCIÓN DE SERVICIOS ---
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddEndpointsApiExplorer();
 
-//  CONFIGURACI�N DE REDIS Alvaro
-// Usamos la contrase�a que definimos en el docker-compose: RepublicRadar_2024!
-var redisConnectionString = "localhost:6379,password=RepublicRadar_2024!";
+builder.Services.AddSwaggerGen(c =>
+{
+    // Usamos OpenApiInfo de la librería .Models
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "HoloRed API - Nueva República",
+        Version = "v1"
+    });
+});
 
-// Registramos el multiplexor como Singleton (una sola conexi�n para toda la App)
-builder.Services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(
-    StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnectionString));
+// CONFIGURACIÓN DE REDIS (Álvaro)
+var redisConnectionString = "localhost:6379,password=RepublicRadar_2024!,abortConnect=false";
+try
+{
+    var connection = ConnectionMultiplexer.Connect(redisConnectionString);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(connection);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"⚠️ Error conectando a Redis: {ex.Message}");
+}
 
-// Registramos tu repositorio para que el Controller pueda pedirlo por el constructor
-builder.Services.AddScoped<HoloRed.Infrastructure.Repositories.RedisRadarRepository>();
-builder.Services.AddSingleton<HoloRed.Services.AtraqueService>();
-// --------------------------------------------------------
+// REGISTRO DE DEPENDENCIAS
+builder.Services.AddScoped<IRadarRepository, RedisRadarRepository>();
+builder.Services.AddSingleton<AtraqueService>();
 
-var app = builder.Build(); 
+var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// --- PIPELINE DE EJECUCIÓN ---
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "HoloRed v1");
+    });
 }
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
-app.MapControllers();
+app.MapControllers(); // <-- El error de Reflection se irá tras limpiar carpetas
 
 app.Run();

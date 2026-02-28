@@ -1,4 +1,5 @@
-﻿using StackExchange.Redis;
+﻿using HoloRed.Domain.Interfaces;
+using StackExchange.Redis;
 using System;
 using System.Threading.Tasks;
 
@@ -11,7 +12,7 @@ namespace HoloRed.Infrastructure.Repositories;
 /// </summary>
 /// <author>Álvaro Naranjo</author>
 /// <date>28/02/2026</date>
-public class RedisRadarRepository
+public class RedisRadarRepository : IRadarRepository
 {
     /// <summary>
     /// Referencia a la base de datos de Redis
@@ -42,5 +43,16 @@ public class RedisRadarRepository
 
         // Clave: nave:{codigo} | Valor: estado
         await _db.StringSetAsync($"nave:{codigoNave}", estado, expiracion);
+    }
+
+    /// <summary>
+    /// Existes the nave asynchronous.
+    /// </summary>
+    /// <param name="codigoNave">The codigo nave.</param>
+    /// <returns></returns>
+     public async Task<bool> ExisteNaveAsync(string codigoNave)
+    {
+        // Verifica si la clave "nave:nombre" existe en Redis
+        return await _db.KeyExistsAsync($"nave:{codigoNave}");
     }
 }

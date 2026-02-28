@@ -1,15 +1,16 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using HoloRed.Infrastructure.Repositories;
-using HoloRed.Services;
+﻿using HoloRed.Domain.Interfaces;
 using HoloRed.Dtos;
+using HoloRed.Services;
+using Microsoft.AspNetCore.Mvc;
 using StackExchange.Redis;
+using System.Threading.Tasks;
 
 namespace HoloRed.Controllers;
 
 /// <summary>
-/// Controlador API para la gestión del Radar espacial.
-/// Permite actualizar balizas en tiempo real (Redis) y gestionar
-/// solicitudes de atraque en bahías espaciales.
+/// Controlador principal del sistema de Radar y Control Espacial.
+/// Gestiona la recepción de señales de balizas y coordina los procesos
+/// de atraque asegurando que solo naves detectadas puedan ocupar bahías.
 /// </summary>
 /// <author>Álvaro Naranjo</author>
 /// <date>28/02/2026</date>
@@ -17,97 +18,76 @@ namespace HoloRed.Controllers;
 [Route("api/[controller]")]
 public class RadarController : ControllerBase
 {
-    private readonly RedisRadarRepository _radarRepo;
+    private readonly IRadarRepository _radarRepo;
     private readonly AtraqueService _atraqueService;
 
     /// <summary>
-    /// Inicializa una nueva instancia del controlador de Radar
-    /// con sus dependencias inyectadas.
+    /// Constructor con inyección de dependencias para el repositorio de radar y servicio de atraque.
     /// </summary>
-    /// <param name="radarRepo">Repositorio Redis para la gestión de balizas.</param>
-    /// <param name="atraqueService">Servicio encargado de la lógica de atraque.</param>
-    public RadarController(RedisRadarRepository radarRepo, AtraqueService atraqueService)
+    /// <param name="radarRepo">Interfaz de acceso a datos en Redis.</param>
+    /// <param name="atraqueService">Servicio lógico de gestión de bahías.</param>
+    public RadarController(IRadarRepository radarRepo, AtraqueService atraqueService)
     {
         _radarRepo = radarRepo;
         _atraqueService = atraqueService;
     }
 
     /// <summary>
-    /// Recibe y actualiza la baliza de una nave espacial,
-    /// renovando su TTL de 10 minutos en Redis.
+    /// Registra o actualiza la señal de una nave en el radar.
+    /// Si la nave ya existe, renueva su tiempo de vida (TTL) en el sistema.
     /// </summary>
-    /// <param name="codigoNave">Identificador único de la nave.</param>
-    /// <param name="dto">Objeto DTO que contiene el nuevo estado de la nave.</param>
-    /// <returns>
-    /// 200 OK si la señal fue registrada correctamente.  
-    /// 503 ServiceUnavailable si Redis no está disponible.  
-    /// 500 InternalServerError ante error inesperado.
-    /// </returns>
+    /// <param name="codigoNave">Identificador único de la nave (ej. Falcon-1).</param>
+    /// <param name="dto">Objeto que contiene el estado actual de la nave.</param>
+    /// <returns>200 OK si la señal se procesó correctamente, 503 si Redis no responde.</returns>
     [HttpPost("baliza/{codigoNave}")]
     public async Task<IActionResult> ActualizarBaliza(string codigoNave, [FromBody] BalizaUpdateDto dto)
     {
         try
         {
+            // Registramos la actividad en Redis con expiración automática
             await _radarRepo.ActualizarBalizaAsync(codigoNave, dto.Estado);
-
-            return Ok(new
-            {
-                message = $"Señal de {codigoNave} recibida. TTL renovado 10 min."
-            });
+            return Ok(new { message = $"Señal de {codigoNave} recibida. TTL renovado." });
         }
         catch (RedisConnectionException)
         {
-            return StatusCode(503, new
-            {
-                error = "Servicio de Radar (Redis) temporalmente no disponible."
-            });
-        }
-        catch (Exception)
-        {
-            return StatusCode(500, new
-            {
-                error = "Error interno inesperado en el sistema de Radar."
-            });
+            // Error controlado si el servidor de persistencia no está disponible
+            return StatusCode(503, new { error = "Servicio de Radar (Redis) no disponible temporalmente." });
         }
     }
 
     /// <summary>
     /// Solicita el atraque de una nave en una bahía específica.
-    /// Implementa control de concurrencia para evitar colisiones.
+    /// Valida primero que la nave esté activa en el radar antes de proceder.
     /// </summary>
-    /// <param name="numeroBahia">Número identificador de la bahía espacial.</param>
-    /// <param name="codigoNave">Identificador único de la nave solicitante.</param>
+    /// <param name="numeroBahia">Número de la bahía deseada.</param>
+    /// <param name="codigoNave">Nombre de la nave que solicita el espacio.</param>
     /// <returns>
-    /// 200 OK si el atraque fue exitoso.  
-    /// 409 Conflict si la bahía ya está reservada.  
-    /// 500 InternalServerError ante error inesperado.
+    /// 200 OK: Atraque exitoso.
+    /// 404 Not Found: La nave no ha enviado baliza previa.
+    /// 409 Conflict: La bahía ya está ocupada por otra nave.
     /// </returns>
     [HttpPost("atraque/{numeroBahia}")]
     public async Task<IActionResult> SolicitarAtraque(int numeroBahia, [FromQuery] string codigoNave)
     {
-        try
+        //  VALIDACIÓN DE SEGURIDAD: Comprobar si la nave existe en Redis
+        bool existeEnRadar = await _radarRepo.ExisteNaveAsync(codigoNave);
+
+        if (!existeEnRadar)
         {
-            bool exito = await _atraqueService.IntentarAtraqueAsync(numeroBahia, codigoNave);
-
-            if (!exito)
+            return NotFound(new
             {
-                return Conflict(new
-                {
-                    message = $"¡ALERTA! La bahía {numeroBahia} ya está reservada. Maniobra abortada."
-                });
-            }
-
-            return Ok(new
-            {
-                message = $"Atraque de {codigoNave} en bahía {numeroBahia} completado con éxito."
+                message = $"Error: La nave '{codigoNave}' no figura en el radar activo. Debe enviar una baliza antes de atracar."
             });
         }
-        catch (Exception)
+
+        // CONTROL DE CONCURRENCIA: El servicio usa SemaphoreSlim para evitar colisiones
+        bool exitoAtraque = await _atraqueService.IntentarAtraqueAsync(numeroBahia, codigoNave);
+
+        if (!exitoAtraque)
         {
-            return StatusCode(500, new
-            {
-                error = "Error interno durante el proceso de atraque."
-            });
+            return Conflict(new { message = $"Alerta de Colisión: La bahía {numeroBahia} ya se encuentra ocupada." });
         }
+
+        return Ok(new { message = $"Maniobra completada: La nave {codigoNave} ha atracado en la bahía {numeroBahia}." });
     }
 }
