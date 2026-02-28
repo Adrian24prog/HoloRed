@@ -1,73 +1,55 @@
-using Cassandra;
-using Cassandra.Mapping;
-using HoloRed.Infrastructure.Cassandra;
-using HoloRed.Infrastructure.Neo4j;
-using HoloRed.Domain.Interfaces;
-using HoloRed.Service; // <-- Nueva capa de l�gica de negocio
-using Neo4j.Driver;
+ï»¿using HoloRed.Domain.Interfaces;
+using HoloRed.Infrastructure.Repositories;
+using HoloRed.Services;
+using StackExchange.Redis;
+using Microsoft.OpenApi.Models; // <--- Â¡YA NO DEBERÃA ESTAR EN ROJO!
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. SERVICIOS BASE DE LA API ---
+// --- SECCIÃN DE SERVICIOS ---
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
 
-// --- 2. CONFIGURACI�N DE CASSANDRA (TELEMETR�A) ---
+builder.Services.AddSwaggerGen(c =>
+{
+    // Usamos OpenApiInfo de la librerÃ­a .Models
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "HoloRed API - Nueva RepÃºblica",
+        Version = "v1"
+    });
+});
+
+// CONFIGURACIÃN DE REDIS (Ãlvaro)
+var redisConnectionString = "localhost:6379,password=RepublicRadar_2024!,abortConnect=false";
 try
 {
-    var cluster = global::Cassandra.Cluster.Builder()
-        .AddContactPoint("127.0.0.1")
-        .Build();
-
-    var session = cluster.Connect();
-
-    // Activamos los mapeos de la infraestructura de Cassandra
-    global::Cassandra.Mapping.MappingConfiguration.Global.Define<CassandraMappingConfig>();
-
-    builder.Services.AddSingleton<global::Cassandra.ISession>(session);
-    builder.Services.AddScoped<CassandraTelemetriaRepository>();
-
-    Console.WriteLine(">>> [OK] Conexi�n con la HoloRed (Cassandra) establecida.");
+    var connection = ConnectionMultiplexer.Connect(redisConnectionString);
+    builder.Services.AddSingleton<IConnectionMultiplexer>(connection);
 }
 catch (Exception ex)
 {
-    Console.WriteLine($">>> [ERROR] No se pudo conectar a Cassandra: {ex.Message}");
+    Console.WriteLine($"â ï¸ Error conectando a Redis: {ex.Message}");
 }
 
-// --- 3. CONFIGURACI�N DE NEO4J (RED DE ESPIONAJE) ---
-try
-{
-    var neo4jDriver = global::Neo4j.Driver.GraphDatabase.Driver(
-        "bolt://localhost:7687",
-        global::Neo4j.Driver.AuthTokens.Basic("neo4j", "password")
-    );
-
-    builder.Services.AddSingleton<global::Neo4j.Driver.IDriver>(neo4jDriver);
-    builder.Services.AddScoped<IEspionajeRepository, Neo4jEspionajeRepository>();
-
-    Console.WriteLine(">>> [OK] Conexi�n con la Red de Espionaje (Neo4j) establecida.");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($">>> [ERROR] No se pudo conectar a Neo4j: {ex.Message}");
-}
-
-// --- 4. REGISTRO DE LA CAPA DE SERVICIO (LOGICA DE NEGOCIO) ---
-// Este es el "cerebro" que coordina tus dos bases de datos (Cassandra y Neo4j)
-builder.Services.AddScoped<IInteligenciaService, InteligenciaService>();
+// REGISTRO DE DEPENDENCIAS
+builder.Services.AddScoped<IRadarRepository, RedisRadarRepository>();
+builder.Services.AddSingleton<AtraqueService>();
 
 var app = builder.Build();
 
-// --- 5. CONFIGURACI�N DEL PIPELINE (MIDDLEWARE) ---
+// --- PIPELINE DE EJECUCIÃN ---
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "HoloRed v1");
+    });
 }
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
-app.MapControllers();
+app.MapControllers(); // <-- El error de Reflection se irÃ¡ tras limpiar carpetas
 
 app.Run();
