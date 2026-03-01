@@ -41,6 +41,8 @@ try
 {
     var cluster = global::Cassandra.Cluster.Builder()
         .AddContactPoint("127.0.0.1")
+        .WithPort(9042) // Añadido el puerto
+        .WithCredentials("admin", "RepublicBattle_2026!") // Añadidas las credenciales
         .Build();
 
     // Intentamos conectar
@@ -65,9 +67,9 @@ catch (Exception ex)
 try
 {
     var neo4jDriver = global::Neo4j.Driver.GraphDatabase.Driver(
-        "bolt://localhost:7687",
-        global::Neo4j.Driver.AuthTokens.Basic("neo4j", "password")
-    );
+    "bolt://localhost:7687",
+    global::Neo4j.Driver.AuthTokens.Basic("neo4j", "RepublicSpies_2026!")
+);
     builder.Services.AddSingleton<global::Neo4j.Driver.IDriver>(neo4jDriver);
     Console.WriteLine(">>> [OK] Neo4j conectado.");
 }

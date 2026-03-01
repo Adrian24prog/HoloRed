@@ -14,9 +14,10 @@ public class Neo4jEspionajeRepository : IEspionajeRepository
 
     public async Task<IEnumerable<string>> ObtenerInfiltradosAsync(string origen, string destino)
     {
+        // Consulta 
         var query = @"
-                MATCH (f1:Faccion {nombre: $origen})<-[:PERTENECE_A]-(e:Espia)-[:INFILTRADO_IN]->(p:Planeta)<-[:CONTROLA]-(f2:Faccion {nombre: $destino})
-                RETURN e.nombre + ' en ' + p.nombre AS info";
+                MATCH (f1:Faccion {nombre: $origen})<-[:INFILTRADO_EN]-(e:Espia)-[:SUMINISTRA_ARMAS_A]->(f2:Faccion {nombre: $destino})
+                RETURN e.nombre AS info";
 
         var session = _driver.AsyncSession();
         try

@@ -95,3 +95,4 @@ appsettings.*.Local.json
 _ReSharper*/
 *.resharper
 *.cache
+*.log
