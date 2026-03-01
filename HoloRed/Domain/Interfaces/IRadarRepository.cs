@@ -25,6 +25,11 @@ public interface IRadarRepository
     /// <param name="codigoNave">The codigo nave.</param>
     /// <returns></returns>
     Task<bool> ExisteNaveAsync(string codigoNave);
+
+    /// <summary>
+    /// Intenta asignar una nave a una bahía de atraque específica usando Locks.
+    /// </summary>
+    Task<bool> AsignarAtraqueAsync(int numeroBahia, string codigoNave);
 }
 
 

@@ -55,4 +55,38 @@ public class RedisRadarRepository : IRadarRepository
         // Verifica si la clave "nave:nombre" existe en Redis
         return await _db.KeyExistsAsync($"nave:{codigoNave}");
     }
+
+    /// <summary>
+    /// Intenta asignar una nave a una bahía de atraque específica.
+    /// Utiliza bloqueos distribuidos (Locks) para garantizar que dos naves
+    /// no ocupen el mismo lugar simultáneamente (Thread-Safe).
+    /// </summary>
+    public async Task<bool> AsignarAtraqueAsync(int numeroBahia, string codigoNave)
+    {
+        string lockKey = $"lock:bahia:{numeroBahia}";
+        string resourceKey = $"bahia:{numeroBahia}";
+
+        // Intentamos adquirir un bloqueo de 5 segundos para realizar la operación
+        if (await _db.LockTakeAsync(lockKey, codigoNave, TimeSpan.FromSeconds(5)))
+        {
+            try
+            {
+                // Verificamos si la bahía ya está ocupada por otra nave
+                if (await _db.KeyExistsAsync(resourceKey))
+                {
+                    return false; // Bahía ya ocupada
+                }
+
+                // Asignamos la nave a la bahía (Sin TTL, el atraque es permanente hasta salida)
+                return await _db.StringSetAsync(resourceKey, codigoNave);
+            }
+            finally
+            {
+                // Liberamos el bloqueo pase lo que pase
+                await _db.LockReleaseAsync(lockKey, codigoNave);
+            }
+        }
+
+        return false; 
+    }
 }

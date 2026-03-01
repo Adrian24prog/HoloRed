@@ -55,39 +55,37 @@ public class RadarController : ControllerBase
         }
     }
 
-    /// <summary>
-    /// Solicita el atraque de una nave en una bahía específica.
-    /// Valida primero que la nave esté activa en el radar antes de proceder.
-    /// </summary>
-    /// <param name="numeroBahia">Número de la bahía deseada.</param>
-    /// <param name="codigoNave">Nombre de la nave que solicita el espacio.</param>
-    /// <returns>
-    /// 200 OK: Atraque exitoso.
-    /// 404 Not Found: La nave no ha enviado baliza previa.
-    /// 409 Conflict: La bahía ya está ocupada por otra nave.
-    /// </returns>
+
     [HttpPost("atraque/{numeroBahia}")]
     public async Task<IActionResult> SolicitarAtraque(int numeroBahia, [FromQuery] string codigoNave)
     {
-        //  VALIDACIÓN DE SEGURIDAD: Comprobar si la nave existe en Redis
-        bool existeEnRadar = await _radarRepo.ExisteNaveAsync(codigoNave);
-
-        if (!existeEnRadar)
+        try
         {
-            return NotFound(new
+            //  Comprobar si la nave existe en Redis
+            bool existeEnRadar = await _radarRepo.ExisteNaveAsync(codigoNave);
+
+            if (!existeEnRadar)
             {
-                message = $"Error: La nave '{codigoNave}' no figura en el radar activo. Debe enviar una baliza antes de atracar."
-            });
+                return NotFound(new
+                {
+                    message = $"Error: La nave '{codigoNave}' no figura en el radar activo. Debe enviar una baliza antes de atracar."
+                });
+            }
+
+            // COntro de hilos
+            bool exitoAtraque = await _radarRepo.AsignarAtraqueAsync(numeroBahia, codigoNave);
+
+            if (!exitoAtraque)
+            {
+                return Conflict(new { message = $"Alerta de Colisión: La bahía {numeroBahia} ya se encuentra ocupada." });
+            }
+
+            return Ok(new { message = $"Maniobra completada: La nave {codigoNave} ha atracado en la bahía {numeroBahia}." });
         }
-
-        // CONTROL DE CONCURRENCIA: El servicio usa SemaphoreSlim para evitar colisiones
-        bool exitoAtraque = await _atraqueService.IntentarAtraqueAsync(numeroBahia, codigoNave);
-
-        if (!exitoAtraque)
+        catch (RedisConnectionException ex)
         {
-            return Conflict(new { message = $"Alerta de Colisión: La bahía {numeroBahia} ya se encuentra ocupada." });
+            // CONTROL DE ERRORES
+            return StatusCode(503, new { message = "El sistema de radar no está disponible actualmente.", detalle = ex.Message });
         }
-
-        return Ok(new { message = $"Maniobra completada: La nave {codigoNave} ha atracado en la bahía {numeroBahia}." });
     }
 }
