@@ -1,18 +1,19 @@
-ï»¿using HoloRed.Domain.Interfaces;
+using HoloRed.Domain.Interfaces;
 using HoloRed.Infrastructure.Repositories;
+using HoloRed.Service;
 using HoloRed.Services;
+using Microsoft.OpenApi.Models; 
 using StackExchange.Redis;
-using Microsoft.OpenApi.Models; // <--- Â¡YA NO DEBERÃA ESTAR EN ROJO!
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- SECCIÃN DE SERVICIOS ---
+// --- SECCION DE SERVICIOS ---
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(c =>
 {
-    // Usamos OpenApiInfo de la librerÃ­a .Models
+    // Usamos OpenApiInfo de la libreria .Models
     c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "HoloRed API - Nueva RepÃºblica",
@@ -36,6 +37,8 @@ catch (Exception ex)
 builder.Services.AddScoped<IRadarRepository, RedisRadarRepository>();
 builder.Services.AddSingleton<AtraqueService>();
 
+builder.Services.AddScoped<IInteligenciaService, InteligenciaService>();
+builder.Services.AddScoped<HoloRed.Infrastructure.Cassandra.CassandraTelemetriaRepository>();
 var app = builder.Build();
 
 // --- PIPELINE DE EJECUCIÃN ---
