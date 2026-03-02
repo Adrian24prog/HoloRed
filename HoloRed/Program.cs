@@ -12,101 +12,63 @@ using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. CONFIGURACIÓN DE SWAGGER ---
+// --- 1. SWAGGER ---
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "HoloRed API - Sistema Central de la Nueva República",
-        Version = "v1",
-        Description = "Sistemas Políglotas (SQL Server, Cassandra, Neo4j, Redis)"
-    });
+builder.Services.AddSwaggerGen(c => {
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "HoloRed API", Version = "v1" });
 });
 
-// --- 2. REGISTRO DE REPOSITORIOS Y SERVICIOS (OBLIGATORIO) ---
-// Registramos los tipos siempre al principio para que la App no explote al validar dependencias
+// --- 2. SERVICIOS Y REPOSITORIOS ---
 builder.Services.AddScoped<CassandraTelemetriaRepository>();
 builder.Services.AddScoped<IEspionajeRepository, Neo4jEspionajeRepository>();
 builder.Services.AddScoped<IRadarRepository, RedisRadarRepository>();
-
 builder.Services.AddScoped<IInteligenciaService, InteligenciaService>();
 builder.Services.AddSingleton<AtraqueService>();
 
-// --- 3. CONEXIÓN A MOTORES DE DATOS ---
+// --- 3. CONEXIONES ---
 
-// A. CASSANDRA (Telemetría)
+// A. CASSANDRA
 try
 {
+    // ACTIVACIÓN DEL MAPPER (Crítico para que el JSON no salga [])
+    global::Cassandra.Mapping.MappingConfiguration.Global.Define<CassandraMappingConfig>();
+
     var cluster = global::Cassandra.Cluster.Builder()
         .AddContactPoint("127.0.0.1")
-        .WithPort(9042) // Añadido el puerto
-        .WithCredentials("admin", "RepublicBattle_2026!") // Añadidas las credenciales
+        .WithPort(9042)
+        .WithCredentials("admin", "RepublicBattle_2026!")
         .Build();
 
-    // Intentamos conectar
-    var session = cluster.Connect();
-
-    // Registramos la sesión real
+    var session = cluster.Connect("holored");
     builder.Services.AddSingleton<global::Cassandra.ISession>(session);
-
-    global::Cassandra.Mapping.MappingConfiguration.Global.Define<CassandraMappingConfig>();
-    Console.WriteLine(">>> [OK] Cassandra conectada.");
+    Console.WriteLine(">>> [OK] Cassandra conectada y mapeo activado.");
 }
 catch (Exception ex)
 {
-    Console.WriteLine($">>> [AVISO] Cassandra no disponible: {ex.Message}");
-
-    // REGISTRO DE SEGURIDAD: Inyectamos un valor nulo para que el constructor del Repositorio 
-    // no haga que la aplicación se cierre al arrancar.
+    Console.WriteLine($">>> [ERROR] Cassandra offline: {ex.Message}");
     builder.Services.AddSingleton<global::Cassandra.ISession>(sp => null!);
 }
 
-// B. NEO4J (Espionaje)
+// B. NEO4J
 try
 {
-    var neo4jDriver = global::Neo4j.Driver.GraphDatabase.Driver(
-    "bolt://localhost:7687",
-    global::Neo4j.Driver.AuthTokens.Basic("neo4j", "RepublicSpies_2026!")
-);
-    builder.Services.AddSingleton<global::Neo4j.Driver.IDriver>(neo4jDriver);
+    var neo4jDriver = GraphDatabase.Driver("bolt://localhost:7687", AuthTokens.Basic("neo4j", "RepublicSpies_2026!"));
+    builder.Services.AddSingleton<IDriver>(neo4jDriver);
     Console.WriteLine(">>> [OK] Neo4j conectado.");
 }
-catch (Exception ex)
-{
-    Console.WriteLine($">>> [AVISO] Neo4j no disponible: {ex.Message}");
-    builder.Services.AddSingleton<global::Neo4j.Driver.IDriver>(sp => null!);
-}
+catch { builder.Services.AddSingleton<IDriver>(sp => null!); }
 
-// C. REDIS (Radar - Álvaro)
-var redisConnectionString = "localhost:6379,password=RepublicRadar_2024!,abortConnect=false";
+// C. REDIS
 try
 {
-    var connection = ConnectionMultiplexer.Connect(redisConnectionString);
-    builder.Services.AddSingleton<IConnectionMultiplexer>(connection);
+    var redis = ConnectionMultiplexer.Connect("localhost:6379,password=RepublicRadar_2024!,abortConnect=false");
+    builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
     Console.WriteLine(">>> [OK] Redis conectado.");
 }
-catch (Exception ex)
-{
-    Console.WriteLine($">>> [AVISO] Redis no disponible: {ex.Message}");
-}
+catch { }
 
-// --- 4. CONSTRUCCIÓN DE LA APP ---
 var app = builder.Build();
-
-// --- 5. PIPELINE DE EJECUCIÓN (MIDDLEWARE) ---
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "HoloRed v1");
-    });
-}
-
-app.UseHttpsRedirection();
-app.UseAuthorization();
+if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 app.MapControllers();
-
 app.Run();

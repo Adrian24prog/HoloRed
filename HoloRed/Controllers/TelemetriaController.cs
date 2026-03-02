@@ -1,66 +1,84 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using HoloRed.Dtos;
 using HoloRed.Domain.Interfaces;
-using HoloRed.Infrastructure.Cassandra;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace HoloRed.Controllers
 {
+    /// <summary>
+    /// Controlador de API para la gestión de telemetría de combate en Cassandra.
+    /// Centraliza las operaciones de registro y consulta de impactos estelares.
+    /// </summary>
+    /// <remarks>
+    /// Autor: Adrian Dondarza
+    /// </remarks>
     [Route("api/[controller]")]
     [ApiController]
     public class TelemetriaController : ControllerBase
     {
         private readonly IInteligenciaService _inteligenciaService;
-        private readonly CassandraTelemetriaRepository _repository; // Mantenemos este solo para la consulta directa de historial
 
         /// <summary>
-        /// Constructor que inyecta el servicio de inteligencia y el repositorio.
+        /// Constructor con inyección del servicio de inteligencia.
         /// </summary>
-        /// <remarks>Autor: Adrian Dondarza</remarks>
-        public TelemetriaController(IInteligenciaService inteligenciaService, CassandraTelemetriaRepository repository)
+        public TelemetriaController(IInteligenciaService inteligenciaService)
         {
             _inteligenciaService = inteligenciaService;
-            _repository = repository;
         }
 
         /// <summary>
         /// POST /api/telemetria/impacto
-        /// Registra un impacto de bláster masivo delegando la lógica al Service.
+        /// Registra un nuevo evento de combate en el motor NoSQL Cassandra.
         /// </summary>
+        /// <param name="dto">Datos del impacto (sector, naves, daño, fecha).</param>
+        /// <returns>Mensaje de confirmación o error 503 si el servicio falla.</returns>
         [HttpPost("impacto")]
         public async Task<IActionResult> RegistrarImpacto([FromBody] ImpactoBatallaDto dto)
         {
             try
             {
-                // Delegamos toda la lógica de conversión y guardado al servicio
+                // Delegamos la lógica de negocio y conversión al servicio
                 await _inteligenciaService.RegistrarEventoCombateAsync(dto);
 
                 return Ok(new { mensaje = "Impacto registrado en los logs de la República a través del Service" });
             }
             catch (Exception ex)
             {
-                // Cumplimos la rúbrica: Error 503 si el motor NoSQL no responde
+                // Error 503: Servicio no disponible (Rúbrica: Fallo en motor NoSQL)
                 return StatusCode(503, "Sistemas de telemetría fuera de línea: " + ex.Message);
             }
         }
 
         /// <summary>
         /// GET /api/telemetria/historial/{sector}?fecha=YYYY-MM-DD
-        /// Devuelve el registro de batalla de un sector en un día específico.
+        /// Consulta el historial de impactos filtrado por sector y fecha exacta.
         /// </summary>
+        /// <param name="sector">ID del sector estelar.</param>
+        /// <param name="fecha">Fecha de la batalla (formato YYYY-MM-DD).</param>
+        /// <returns>Lista de impactos o 404 con mensaje personalizado si no hay datos.</returns>
         [HttpGet("historial/{sector}")]
         public async Task<IActionResult> ObtenerHistorial(string sector, [FromQuery] DateTime fecha)
         {
             try
             {
-                // Consulta directa optimizada por Partition Key
-                var resultados = await _repository.ObtenerHistorialPorSectorAsync(sector, fecha.Date);
+                // Solicitamos los datos al servicio. 
+                // Si no hay resultados, el servicio lanzará una KeyNotFoundException.
+                var resultados = await _inteligenciaService.ObtenerHistorialAsync(sector, fecha);
+
                 return Ok(resultados);
             }
-            catch (Exception)
+            catch (KeyNotFoundException ex)
             {
-                return StatusCode(503, "Error al consultar la HoloRed");
+                // RESPUESTA SEMÁNTICA: Devolvemos 404 con el mensaje de "No encontrado"
+                // Esto ocurre cuando la búsqueda es válida pero la lista está vacía.
+                return NotFound(new { mensaje = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                // Error 503: Indica problemas técnicos con el nodo de Cassandra.
+                return StatusCode(503, "Error al consultar la HoloRed (Posible caída del nodo Cassandra): " + ex.Message);
             }
         }
     }

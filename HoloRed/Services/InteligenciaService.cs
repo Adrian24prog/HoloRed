@@ -2,9 +2,11 @@
 using HoloRed.Domain.Interfaces;
 using HoloRed.Dtos;
 using HoloRed.Infrastructure.Cassandra;
+using Cassandra; // Necesario para el tipo LocalDate
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace HoloRed.Service
 {
@@ -20,9 +22,6 @@ namespace HoloRed.Service
         private readonly CassandraTelemetriaRepository _cassandraRepo;
         private readonly IEspionajeRepository _neo4jRepo;
 
-        /// <summary>
-        /// Constructor con inyección de dependencias para los repositorios políglotas.
-        /// </summary>
         public InteligenciaService(
             CassandraTelemetriaRepository cassandraRepo,
             IEspionajeRepository neo4jRepo)
@@ -32,37 +31,53 @@ namespace HoloRed.Service
         }
 
         /// <summary>
-        /// Procesa y persiste un evento de combate. 
-        /// Aquí se aplica la lógica de transformación del DTO a la Entidad de Cassandra.
+        /// Procesa y persiste un evento de combate convirtiendo los tipos de C# a Cassandra.
         /// </summary>
-        /// <param name="dto">Datos de entrada desde la API.</param>
         public async Task RegistrarEventoCombateAsync(ImpactoBatallaDto dto)
         {
-            // Lógica de negocio: Validamos o transformamos datos antes de guardar
-            // Por ejemplo: Forzamos que la fecha sea solo el componente 'Date' para la Partition Key
+            var fechaCassandra = new LocalDate(dto.Fecha.Year, dto.Fecha.Month, dto.Fecha.Day);
+
             var entidad = new RegistroCombate
             {
                 SectorId = dto.SectorId,
-                Fecha = dto.Fecha.Date,
-                Timestamp = DateTimeOffset.Now, // Generamos el timestamp exacto del registro
+                Fecha = fechaCassandra,
+                Timestamp = DateTimeOffset.Now,
                 NaveAtacante = dto.NaveAtacante,
                 NaveObjetivo = dto.NaveObjetivo,
-                DañoEscudos = dto.DañoEscudos
+                DanioEscudos = dto.DañoEscudos
             };
 
-            // Delegamos la persistencia al repositorio de Cassandra
             await _cassandraRepo.RegistrarImpactoAsync(entidad);
         }
 
         /// <summary>
-        /// Consulta la red de grafos para identificar agentes infiltrados entre facciones.
+        /// Obtiene el historial y valida si existen resultados.
+        /// Si la lista está vacía, lanza una excepción capturable por el controlador.
         /// </summary>
-        /// <param name="origen">Facción de los espías (ej. Rebeldes).</param>
-        /// <param name="destino">Facción objetivo (ej. Imperio).</param>
-        /// <returns>Lista de strings con información de infiltración.</returns>
+        public async Task<IEnumerable<RegistroCombateDto>> ObtenerHistorialAsync(string sectorId, DateTime fecha)
+        {
+            var resultados = await _cassandraRepo.ObtenerHistorialPorSectorAsync(sectorId, fecha.Date);
+
+            if (resultados == null || !resultados.Any())
+            {
+                throw new KeyNotFoundException($"No hay registros para el sector {sectorId} el día {fecha:yyyy-MM-dd}.");
+            }
+
+            // Convertimos la entidad de Cassandra a DTO compatible con JSON/Swagger
+            return resultados.Select(r => new RegistroCombateDto
+            {
+                SectorId = r.SectorId,
+                // Convertimos LocalDate a string legible
+                Fecha = $"{r.Fecha.Year}-{r.Fecha.Month:D2}-{r.Fecha.Day:D2}",
+                Timestamp = r.Timestamp,
+                NaveAtacante = r.NaveAtacante,
+                NaveObjetivo = r.NaveObjetivo,
+                DanioEscudos = r.DanioEscudos
+            });
+        }
+
         public async Task<IEnumerable<string>> AnalizarInfiltradosAsync(string origen, string destino)
         {
-            // Llamada directa al motor de grafos Neo4j
             return await _neo4jRepo.ObtenerInfiltradosAsync(origen, destino);
         }
     }

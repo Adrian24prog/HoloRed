@@ -1,4 +1,5 @@
-﻿using HoloRed.Dtos;
+﻿using HoloRed.Domain.Entities.Cassandra;
+using HoloRed.Dtos;
 
 namespace HoloRed.Domain.Interfaces;
 
@@ -9,5 +10,9 @@ namespace HoloRed.Domain.Interfaces;
 public interface IInteligenciaService
 {
     Task RegistrarEventoCombateAsync(ImpactoBatallaDto dto);
+
+    // CAMBIA ESTO: De RegistroCombate a RegistroCombateDto
+    Task<IEnumerable<RegistroCombateDto>> ObtenerHistorialAsync(string sectorId, DateTime fecha);
+
     Task<IEnumerable<string>> AnalizarInfiltradosAsync(string origen, string destino);
 }
