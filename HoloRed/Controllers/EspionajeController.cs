@@ -35,6 +35,18 @@ public class EspionajeController : ControllerBase
             // Llamamos al servicio para ejecutar la consulta Cypher de grafos
             var reporte = await _inteligenciaService.AnalizarInfiltradosAsync(origen, destino);
 
+
+            if (reporte == null || !reporte.Any())
+            {
+                
+                return NotFound(new
+                {
+                    FechaConsulta = DateTime.Now,
+                    mensaje = $"Informe de Inteligencia: No se han detectado agentes de {origen} colaborando con {destino}. El sector parece estar limpio.",
+                    codigo = "CLEAR_SECTOR"
+                });
+            }
+
             return Ok(new
             {
                 FechaConsulta = DateTime.Now,
