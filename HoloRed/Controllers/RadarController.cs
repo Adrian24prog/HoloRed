@@ -3,6 +3,7 @@ using HoloRed.Dtos;
 using HoloRed.Services;
 using Microsoft.AspNetCore.Mvc;
 using StackExchange.Redis;
+using System;
 using System.Threading.Tasks;
 
 namespace HoloRed.Controllers;
@@ -13,7 +14,7 @@ namespace HoloRed.Controllers;
 /// de atraque asegurando que solo naves detectadas puedan ocupar bahías.
 /// </summary>
 /// <author>Álvaro Naranjo</author>
-/// <date>28/02/2026</date>
+/// <date>02/03/2026</date>
 [ApiController]
 [Route("api/[controller]")]
 public class RadarController : ControllerBase
@@ -21,11 +22,6 @@ public class RadarController : ControllerBase
     private readonly IRadarRepository _radarRepo;
     private readonly AtraqueService _atraqueService;
 
-    /// <summary>
-    /// Constructor con inyección de dependencias para el repositorio de radar y servicio de atraque.
-    /// </summary>
-    /// <param name="radarRepo">Interfaz de acceso a datos en Redis.</param>
-    /// <param name="atraqueService">Servicio lógico de gestión de bahías.</param>
     public RadarController(IRadarRepository radarRepo, AtraqueService atraqueService)
     {
         _radarRepo = radarRepo;
@@ -34,58 +30,66 @@ public class RadarController : ControllerBase
 
     /// <summary>
     /// Registra o actualiza la señal de una nave en el radar.
-    /// Si la nave ya existe, renueva su tiempo de vida (TTL) en el sistema.
     /// </summary>
-    /// <param name="codigoNave">Identificador único de la nave (ej. Falcon-1).</param>
-    /// <param name="dto">Objeto que contiene el estado actual de la nave.</param>
-    /// <returns>200 OK si la señal se procesó correctamente, 503 si Redis no responde.</returns>
+    /// <returns>200 OK, o 503 si el motor de memoria falla.</returns>
     [HttpPost("baliza/{codigoNave}")]
     public async Task<IActionResult> ActualizarBaliza(string codigoNave, [FromBody] BalizaUpdateDto dto)
     {
         try
         {
-            // Registramos la actividad en Redis con expiración automática
             await _radarRepo.ActualizarBalizaAsync(codigoNave, dto.Estado);
-            return Ok(new { message = $"Señal de {codigoNave} recibida. TTL renovado." });
+            return Ok(new { message = $"Señal de {codigoNave} recibida. TTL renovado satisfactoriamente." });
         }
-        catch (RedisConnectionException)
+        catch (Exception ex) when (ex is RedisConnectionException || ex is RedisTimeoutException || ex is RedisServerException)
         {
-            // Error controlado si el servidor de persistencia no está disponible
-            return StatusCode(503, new { error = "Servicio de Radar (Redis) no disponible temporalmente." });
+            // Captura de múltiples excepciones específicas de Redis para devolver un 503 semántico
+            return StatusCode(503, new
+            {
+                error = "Servicio de Radar (Redis) no disponible o saturado.",
+                detalle = "Interferencias en la HoloRed detectadas."
+            });
         }
     }
 
-
+    /// <summary>
+    /// Proceso crítico de atraque con validación previa en Radar.
+    /// </summary>
     [HttpPost("atraque/{numeroBahia}")]
     public async Task<IActionResult> SolicitarAtraque(int numeroBahia, [FromQuery] string codigoNave)
     {
         try
         {
-            //  Comprobar si la nave existe en Redis
+            // 1. Validación de existencia en motor Clave-Valor
             bool existeEnRadar = await _radarRepo.ExisteNaveAsync(codigoNave);
 
             if (!existeEnRadar)
             {
                 return NotFound(new
                 {
-                    message = $"Error: La nave '{codigoNave}' no figura en el radar activo. Debe enviar una baliza antes de atracar."
+                    message = $"Error: La nave '{codigoNave}' no figura en el radar activo. Debe emitir señal de baliza antes del atraque."
                 });
             }
 
-            // COntro de hilos
+            // 2. Ejecución de maniobra con control de concurrencia (SemaphoreSlim)
             bool exitoAtraque = await _radarRepo.AsignarAtraqueAsync(numeroBahia, codigoNave);
 
             if (!exitoAtraque)
             {
-                return Conflict(new { message = $"Alerta de Colisión: La bahía {numeroBahia} ya se encuentra ocupada." });
+                // Devolvemos 409 Conflict si la bahía ya está ocupada por otro hilo/nave
+                return Conflict(new { message = $"Alerta de Colisión: La bahía {numeroBahia} ya está asignada a otra nave." });
             }
 
-            return Ok(new { message = $"Maniobra completada: La nave {codigoNave} ha atracado en la bahía {numeroBahia}." });
+            return Ok(new { message = $"Maniobra completada: La nave {codigoNave} está segura en la bahía {numeroBahia}." });
         }
-        catch (RedisConnectionException ex)
+        catch (Exception ex) when (ex is RedisConnectionException || ex is RedisTimeoutException)
         {
-            // CONTROL DE ERRORES
-            return StatusCode(503, new { message = "El sistema de radar no está disponible actualmente.", detalle = ex.Message });
+            // Respuesta adecuada ante caída del motor NoSQL
+            return StatusCode(503, new { message = "El sistema de radar no responde. Maniobra de atraque abortada por seguridad." });
+        }
+        catch (Exception ex)
+        {
+            // Captura genérica para evitar el cierre de la API (Punto 4 de la rúbrica)
+            return StatusCode(500, new { message = "Error interno en los sistemas de atraque.", info = ex.Message });
         }
     }
 }
