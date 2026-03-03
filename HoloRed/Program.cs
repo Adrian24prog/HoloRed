@@ -48,7 +48,7 @@ builder.Services.AddSingleton<AtraqueService>();
 // A. CASSANDRA
 try
 {
-    // ACTIVACIÓN DEL MAPPER (Crítico para que el JSON no salga [])
+    // ACTIVACIÓN DEL MAPPER
     global::Cassandra.Mapping.MappingConfiguration.Global.Define<CassandraMappingConfig>();
 
     var cluster = global::Cassandra.Cluster.Builder()
@@ -79,7 +79,7 @@ catch { builder.Services.AddSingleton<IDriver>(sp => null!); }
 // C. REDIS
 try
 {
-    var redis = ConnectionMultiplexer.Connect("localhost:6379,password=RepublicRadar_2024!,abortConnect=false");
+    var redis = ConnectionMultiplexer.Connect("localhost:6379,password=RepublicRadar_2026!,abortConnect=false");
     builder.Services.AddSingleton<IConnectionMultiplexer>(redis);
     Console.WriteLine(">>> [OK] Redis conectado.");
 }
