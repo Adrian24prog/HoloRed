@@ -1,23 +1,40 @@
 using Cassandra;
 using Cassandra.Mapping;
+using HoloRed.Domain.Interfaces;
 using HoloRed.Infrastructure.Cassandra;
 using HoloRed.Infrastructure.Neo4j;
 using HoloRed.Infrastructure.Repositories;
-using HoloRed.Domain.Interfaces;
 using HoloRed.Service;
 using HoloRed.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Models;
 using Neo4j.Driver;
 using StackExchange.Redis;
-using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// --- 1. SWAGGER ---
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        //Captura de errores de validación de modelo para mejorar la respuesta al cliente
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            return new BadRequestObjectResult(new
+            {
+                error = "Datos de telemetría corruptos",
+                mensaje = "El formato del impacto no es válido. Revise los tipos introducidos.",
+                detalles = context.ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
+            });
+        };
+    });
+
+// Configuración necesaria para documentar la HoloRed API
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "HoloRed API", Version = "v1" });
 });
+
+
 
 // --- 2. SERVICIOS Y REPOSITORIOS ---
 builder.Services.AddScoped<CassandraTelemetriaRepository>();

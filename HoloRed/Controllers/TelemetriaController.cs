@@ -37,17 +37,50 @@ namespace HoloRed.Controllers
         [HttpPost("impacto")]
         public async Task<IActionResult> RegistrarImpacto([FromBody] ImpactoBatallaDto dto)
         {
+            
+            // Capturo si faltan campos o si el formato es inválido
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new
+                {
+                    error = "Datos de telemetría corruptos",
+                    mensaje = "El formato del impacto no es válido. Revise que los tipos o atirbutos introducidos.",
+                    detalles = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
+                });
+            }
+
             try
             {
-                // Delegamos la lógica de negocio y conversión al servicio
+               
+
+                // Delegamos al servicio
                 await _inteligenciaService.RegistrarEventoCombateAsync(dto);
 
-                return Ok(new { mensaje = "Impacto registrado en los logs de la República a través del Service" });
+                return Ok(new
+                {
+                    mensaje = $"¡Registro de impacto recibido en el {dto.SectorId}! " +
+                              $"Los daños en el objetivo ({dto.NaveObjetivo}) han sido procesados. " +
+                              "¡Que la persistencia políglota te acompañe, Comandante Álvaro!"
+                });
+            }
+            catch (Cassandra.NoHostAvailableException ex)
+            {
+                // Error 503: Cassandra fuera de línea
+                return StatusCode(503, new
+                {
+                    error = "Sistemas de telemetría fuera de línea",
+                    motivo = "El motor de datos masivos (Cassandra) no responde.",
+                    detalles = ex.Message
+                });
             }
             catch (Exception ex)
             {
-                // Error 503: Servicio no disponible (Rúbrica: Fallo en motor NoSQL)
-                return StatusCode(503, "Sistemas de telemetría fuera de línea: " + ex.Message);
+                // Error 500: Error genérico controlado
+                return StatusCode(500, new
+                {
+                    error = "Interferencia detectada en el puente de mando",
+                    mensaje = ex.Message
+                });
             }
         }
 

@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Cassandra; // Librería base
-using Cassandra.Mapping; // Librería de mapeo
+using Cassandra;
+using Cassandra.Mapping;
 using HoloRed.Domain.Entities.Cassandra;
 
 namespace HoloRed.Infrastructure.Cassandra;
 
 public class CassandraTelemetriaRepository
 {
-    // Usamos el prefijo completo para evitar errores de "ambigüedad"
     private readonly global::Cassandra.ISession _session;
     private readonly global::Cassandra.Mapping.IMapper _mapper;
 
@@ -17,27 +16,30 @@ public class CassandraTelemetriaRepository
     {
         _session = session;
 
-        // 1. Configuramos el mapeo localmente
+        // Configuramos el mapeo asegurando que apunte al Keyspace correcto
         var mappingConfig = new global::Cassandra.Mapping.MappingConfiguration();
-        mappingConfig.Define<HoloRed.Infrastructure.Cassandra.CassandraMappingConfig>();
+        mappingConfig.Define(new global::Cassandra.Mapping.Map<RegistroCombate>()
+            .TableName("impactos")      // Nombre real de la tabla en Cassandra
+            .KeyspaceName("holored")    // Especificamos el Keyspace para evitar el error 503
+            .PartitionKey(u => u.SectorId, u => u.Fecha)
+            .Column(u => u.DanoEscudos, cm => cm.WithName("danoescudos"))); 
 
-        // 2. Inicializamos el Mapper con la sesión y la configuración
         _mapper = new global::Cassandra.Mapping.Mapper(session, mappingConfig);
     }
 
     public async Task RegistrarImpactoAsync(RegistroCombate impacto)
     {
+        // El mapper --> a holored.impactos
         await _mapper.InsertAsync(impacto);
     }
 
     public async Task<IEnumerable<RegistroCombate>> ObtenerHistorialPorSectorAsync(string sectorId, DateTime fecha)
     {
-        // LocalDate es un tipo propio de Cassandra (4 bytes para fecha)
         var cassandraFecha = new global::Cassandra.LocalDate(fecha.Year, fecha.Month, fecha.Day);
 
-        // Usamos Cql.New para que el Mapper sepa cómo traducir los nombres de las columnas
+        // Actualizamos la consulta para usar el nombre de tabla correcto: 'impactos'
         var query = global::Cassandra.Mapping.Cql.New(
-            "SELECT * FROM telemetria_combate WHERE sector_id = ? AND fecha = ?",
+            "SELECT * FROM holored.impactos WHERE SectorId = ? AND Fecha = ?",
             sectorId,
             cassandraFecha);
 

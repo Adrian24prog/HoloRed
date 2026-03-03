@@ -20,6 +20,6 @@ public class CassandraMappingConfig : global::Cassandra.Mapping.Mappings
         mapConfig.Column(x => x.Timestamp, cm => cm.WithName("timestamp"));
         mapConfig.Column(x => x.NaveAtacante, cm => cm.WithName("nave_atacante"));
         mapConfig.Column(x => x.NaveObjetivo, cm => cm.WithName("nave_objetivo"));
-        mapConfig.Column(x => x.DanioEscudos, cm => cm.WithName("danio_escudos"));
+        mapConfig.Column(x => x.DanoEscudos, cm => cm.WithName("dano_escudos"));
     }
 }

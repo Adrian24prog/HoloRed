@@ -35,6 +35,13 @@ namespace HoloRed.Service
         /// </summary>
         public async Task RegistrarEventoCombateAsync(ImpactoBatallaDto dto)
         {
+            // Validacion de negocio - daños superiores a 0
+            if (dto.DanoEscudos < 0)
+            {
+                // Excepcion que capturara el controlador
+                throw new ArgumentException("Alerta: No se permiten impactos con daño negativo.");
+            }
+
             var fechaCassandra = new LocalDate(dto.Fecha.Year, dto.Fecha.Month, dto.Fecha.Day);
 
             var entidad = new RegistroCombate
@@ -44,7 +51,7 @@ namespace HoloRed.Service
                 Timestamp = DateTimeOffset.Now,
                 NaveAtacante = dto.NaveAtacante,
                 NaveObjetivo = dto.NaveObjetivo,
-                DanioEscudos = dto.DañoEscudos
+                DanoEscudos = dto.DanoEscudos
             };
 
             await _cassandraRepo.RegistrarImpactoAsync(entidad);
@@ -72,7 +79,7 @@ namespace HoloRed.Service
                 Timestamp = r.Timestamp,
                 NaveAtacante = r.NaveAtacante,
                 NaveObjetivo = r.NaveObjetivo,
-                DanioEscudos = r.DanioEscudos
+                DanioEscudos = r.DanoEscudos
             });
         }
 
