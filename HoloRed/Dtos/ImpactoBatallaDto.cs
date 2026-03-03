@@ -31,7 +31,7 @@ public class ImpactoBatallaDto
     /// <summary>
     /// Cantidad de daño reducido de los escudos deflectores tras el impacto.
     /// </summary>
-    public int DañoEscudos { get; set; }
+    public int DanoEscudos { get; set; }
 
     /// <summary>
     /// Fecha y hora exacta del suceso. 

@@ -54,8 +54,8 @@ public class RegistroCombate
 
     /// <summary>
     /// Valor entero que representa el daño mitigado o recibido en los escudos.
-    /// Mapeado a 'danio_escudos' para evitar conflictos con caracteres especiales (ñ).
+    /// Mapeado a 'dano_escudos' para evitar conflictos con caracteres especiales (ñ).
     /// </summary>
     [Column("danio_escudos")]
-    public int DanioEscudos { get; set; }
+    public int DanoEscudos { get; set; }
 }
