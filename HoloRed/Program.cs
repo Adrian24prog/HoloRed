@@ -28,7 +28,7 @@ builder.Services.AddControllers()
         };
     });
 
-// Configuración necesaria para documentar la HoloRed API
+// Configuración 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "HoloRed API", Version = "v1" });

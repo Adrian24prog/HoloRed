@@ -59,8 +59,7 @@ namespace HoloRed.Controllers
                 return Ok(new
                 {
                     mensaje = $"¡Registro de impacto recibido en el {dto.SectorId}! " +
-                              $"Los daños en el objetivo ({dto.NaveObjetivo}) han sido procesados. " +
-                              "¡Que la persistencia políglota te acompañe, Comandante Álvaro!"
+                              $"Los daños en el objetivo ({dto.NaveObjetivo}) han sido procesados. " 
                 });
             }
             catch (Cassandra.NoHostAvailableException ex)
