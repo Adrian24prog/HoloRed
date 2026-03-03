@@ -107,7 +107,7 @@ public class TelemetriaController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Requisito 5: Error 503 ante la caída de nodos específicos de Cassandra durante la lectura
+            // Error 503 ante la caída de nodos específicos de Cassandra durante la lectura
             return StatusCode(503, new
             {
                 error = "Error al consultar la HoloRed táctica",

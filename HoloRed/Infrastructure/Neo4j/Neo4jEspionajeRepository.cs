@@ -58,7 +58,7 @@ public class Neo4jEspionajeRepository : IEspionajeRepository
         }
         catch (ServiceUnavailableException ex)
         {
-            // Requisito 4: Captura específica de errores de conexión con el nodo de Neo4j
+            // Captura específica de errores de conexión con el nodo de Neo4j
             throw new System.Exception("Error de comunicación con el motor de inteligencia de grafos.", ex);
         }
         finally

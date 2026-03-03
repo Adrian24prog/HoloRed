@@ -88,7 +88,7 @@ public class RadarController : ControllerBase
         }
         catch (Exception ex)
         {
-            // Captura genérica para evitar el cierre de la API (Punto 4 de la rúbrica)
+            // Captura genérica para evitar el cierre de la API
             return StatusCode(500, new { message = "Error interno en los sistemas de atraque.", info = ex.Message });
         }
     }
