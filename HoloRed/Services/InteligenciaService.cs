@@ -84,7 +84,7 @@ public class InteligenciaService : IInteligenciaService
         // Verificación de existencia de registros para evitar respuestas vacías ambiguas
         if (resultados == null || !resultados.Any())
         {
-            throw new KeyNotFoundException($"Informe táctico: El sector {sectorId} no presenta anomalías el día {fecha:yyyy-MM-dd}.");
+            throw new KeyNotFoundException($"Informe táctico: El sector {sectorId} no presenta anomalías el día {fecha:yyyy-MM-dd}. (No existe)");
         }
 
         // Proyección de Entidades nativas a DTOs de salida (Desacoplamiento de infraestructura)

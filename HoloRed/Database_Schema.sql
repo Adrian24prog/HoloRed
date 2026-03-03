@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS telemetria_combate (
     nave_objetivo text,
     danio_escudos int,
     PRIMARY KEY ((sector_id), fecha, timestamp)
-) WITH CLUSTERING ORDER BY (fecha DESC, timestamp DESC);NG ORDER BY (fecha DESC, timestamp DESC);
+) WITH CLUSTERING ORDER BY (fecha DESC, timestamp DESC) NG ORDER BY (fecha DESC, timestamp DESC);
 
 //Para acceder:
 docker exec -it cassandra_telemetria cqlsh -u admin -p RepublicBattle_2026!
