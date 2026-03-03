@@ -1,10 +1,19 @@
 ﻿namespace HoloRed.Domain.Entities;
 
 /// <summary>
-/// Representa un nodo de tipo Facción (Imperio, Alianza) en Neo4j.
+/// Representa una organización política o militar dentro del motor de grafos Neo4j.
+/// Actúa como un nodo central para establecer relaciones de control territorial 
+/// e identificación de infiltraciones en el Módulo de Inteligencia.
 /// </summary>
-/// <remarks>Autor: Adrian Dondarza</remarks>
+/// <remarks>
+/// <author>Adrian Dondarza</author>
+/// <date>03/03/2026</date>
+/// </remarks>
 public class Faccion
 {
-    public string Nombre { get; set; }
+    /// <summary>
+    /// Nombre distintivo de la organización (ej. Imperio Galáctico, Alianza Rebelde).
+    /// Se utiliza como identificador clave en las consultas Cypher para trazar rutas de espionaje.
+    /// </summary>
+    public string Nombre { get; set; } = string.Empty;
 }

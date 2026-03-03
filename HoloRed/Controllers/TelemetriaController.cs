@@ -3,115 +3,117 @@ using HoloRed.Dtos;
 using HoloRed.Domain.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
-namespace HoloRed.Controllers
+namespace HoloRed.Controllers;
+
+/// <summary>
+/// Controlador de API para la gestión de telemetría de combate mediante el motor NoSQL Cassandra.
+/// Orquesta el registro masivo de impactos y la consulta optimizada por sectores estelares.
+/// </summary>
+/// <remarks>
+/// <author>Adrian Dondarza</author>
+/// <date>02/03/2026</date>
+/// </remarks>
+[Route("api/[controller]")]
+[ApiController]
+public class TelemetriaController : ControllerBase
 {
+    private readonly IInteligenciaService _inteligenciaService;
+
     /// <summary>
-    /// Controlador de API para la gestión de telemetría de combate en Cassandra.
-    /// Centraliza las operaciones de registro y consulta de impactos estelares.
+    /// Inicializa una nueva instancia del controlador inyectando el servicio de inteligencia.
     /// </summary>
-    /// <remarks>
-    /// Autor: Adrian Dondarza
-    /// </remarks>
-    [Route("api/[controller]")]
-    [ApiController]
-    public class TelemetriaController : ControllerBase
+    /// <param name="inteligenciaService">Interfaz del servicio de lógica de negocio políglota.</param>
+    public TelemetriaController(IInteligenciaService inteligenciaService)
     {
-        private readonly IInteligenciaService _inteligenciaService;
+        _inteligenciaService = inteligenciaService;
+    }
 
-        /// <summary>
-        /// Constructor con inyección del servicio de inteligencia.
-        /// </summary>
-        public TelemetriaController(IInteligenciaService inteligenciaService)
+    /// <summary>
+    /// Registra un nuevo evento de combate de forma asíncrona en el motor de familias de columnas.
+    /// Diseñado para absorber altas tasas de escritura (Append-only).
+    /// </summary>
+    /// <param name="dto">Objeto de transferencia de datos con los detalles del impacto.</param>
+    /// <returns>Estado de la operación o error semántico 503 si el clúster no está disponible.</returns>
+    [HttpPost("impacto")]
+    public async Task<IActionResult> RegistrarImpacto([FromBody] ImpactoBatallaDto dto)
+    {
+        // Validación de esquema y tipos de datos de entrada
+        if (!ModelState.IsValid)
         {
-            _inteligenciaService = inteligenciaService;
+            return BadRequest(new
+            {
+                error = "Datos de telemetría corruptos",
+                mensaje = "El formato del impacto no es válido. Verifique los tipos y atributos obligatorios.",
+                detalles = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
+            });
         }
 
-        /// <summary>
-        /// POST /api/telemetria/impacto
-        /// Registra un nuevo evento de combate en el motor NoSQL Cassandra.
-        /// </summary>
-        /// <param name="dto">Datos del impacto (sector, naves, daño, fecha).</param>
-        /// <returns>Mensaje de confirmación o error 503 si el servicio falla.</returns>
-        [HttpPost("impacto")]
-        public async Task<IActionResult> RegistrarImpacto([FromBody] ImpactoBatallaDto dto)
+        try
         {
-            
-            // Capturo si faltan campos o si el formato es inválido
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(new
-                {
-                    error = "Datos de telemetría corruptos",
-                    mensaje = "El formato del impacto no es válido. Revise que los tipos o atirbutos introducidos.",
-                    detalles = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
-                });
-            }
+            // Delegación de la persistencia a la capa de servicio
+            await _inteligenciaService.RegistrarEventoCombateAsync(dto);
 
-            try
+            return Ok(new
             {
-               
-
-                // Delegamos al servicio
-                await _inteligenciaService.RegistrarEventoCombateAsync(dto);
-
-                return Ok(new
-                {
-                    mensaje = $"¡Registro de impacto recibido en el {dto.SectorId}! " +
-                              $"Los daños en el objetivo ({dto.NaveObjetivo}) han sido procesados. " 
-                });
-            }
-            catch (Cassandra.NoHostAvailableException ex)
-            {
-                // Error 503: Cassandra fuera de línea
-                return StatusCode(503, new
-                {
-                    error = "Sistemas de telemetría fuera de línea",
-                    motivo = "El motor de datos masivos (Cassandra) no responde.",
-                    detalles = ex.Message
-                });
-            }
-            catch (Exception ex)
-            {
-                // Error 500: Error genérico controlado
-                return StatusCode(500, new
-                {
-                    error = "Interferencia detectada en el puente de mando",
-                    mensaje = ex.Message
-                });
-            }
+                mensaje = $"¡Registro de impacto recibido en el sector {dto.SectorId}! " +
+                          $"Los daños en el objetivo ({dto.NaveObjetivo}) han sido procesados correctamente."
+            });
         }
-
-        /// <summary>
-        /// GET /api/telemetria/historial/{sector}?fecha=YYYY-MM-DD
-        /// Consulta el historial de impactos filtrado por sector y fecha exacta.
-        /// </summary>
-        /// <param name="sector">ID del sector estelar.</param>
-        /// <param name="fecha">Fecha de la batalla (formato YYYY-MM-DD).</param>
-        /// <returns>Lista de impactos o 404 con mensaje personalizado si no hay datos.</returns>
-        [HttpGet("historial/{sector}")]
-        public async Task<IActionResult> ObtenerHistorial(string sector, [FromQuery] DateTime fecha)
+        catch (Cassandra.NoHostAvailableException ex)
         {
-            try
+            // Requisito 4: Captura de excepciones específicas del driver para evitar errores 500 genéricos
+            return StatusCode(503, new
             {
-                // Solicitamos los datos al servicio. 
-                // Si no hay resultados, el servicio lanzará una KeyNotFoundException.
-                var resultados = await _inteligenciaService.ObtenerHistorialAsync(sector, fecha);
+                error = "Sistemas de telemetría fuera de línea",
+                motivo = "El motor de datos masivos (Cassandra) no responde a las solicitudes de escritura.",
+                detalles = ex.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            // Captura de errores de lógica de negocio o fallos inesperados
+            return StatusCode(500, new
+            {
+                error = "Interferencia detectada en el puente de mando",
+                mensaje = ex.Message
+            });
+        }
+    }
 
-                return Ok(resultados);
-            }
-            catch (KeyNotFoundException ex)
+    /// <summary>
+    /// Obtiene el historial de combate filtrado por sector y fecha.
+    /// Utiliza el diseño de Primary Key de Cassandra para evitar escaneos completos (Full Scans).
+    /// </summary>
+    /// <param name="sector">Identificador único del sector estelar (Partition Key).</param>
+    /// <param name="fecha">Fecha de la batalla en formato YYYY-MM-DD (Clustering Key).</param>
+    /// <returns>Lista de registros de combate o 404 si no existen datos para ese filtro.</returns>
+    [HttpGet("historial/{sector}")]
+    public async Task<IActionResult> ObtenerHistorial(string sector, [FromQuery] DateTime fecha)
+    {
+        try
+        {
+            // Recuperación de datos optimizada por clave de partición
+            var resultados = await _inteligenciaService.ObtenerHistorialAsync(sector, fecha);
+
+            return Ok(resultados);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            // Respuesta semántica: 404 para indicar que la consulta es válida pero no hay datos
+            return NotFound(new { mensaje = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            // Requisito 5: Error 503 ante la caída de nodos específicos de Cassandra durante la lectura
+            return StatusCode(503, new
             {
-                // RESPUESTA SEMÁNTICA: Devolvemos 404 con el mensaje de "No encontrado"
-                // Esto ocurre cuando la búsqueda es válida pero la lista está vacía.
-                return NotFound(new { mensaje = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                // Error 503: Indica problemas técnicos con el nodo de Cassandra.
-                return StatusCode(503, "Error al consultar la HoloRed (Posible caída del nodo Cassandra): " + ex.Message);
-            }
+                error = "Error al consultar la HoloRed táctica",
+                detalle = "El nodo de datos Cassandra no está disponible para lectura.",
+                excepcion = ex.Message
+            });
         }
     }
 }
